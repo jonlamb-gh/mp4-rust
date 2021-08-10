@@ -4,9 +4,10 @@ use std::io::prelude::*;
 use std::io::{self, BufReader};
 use std::path::Path;
 
-use mp4::{Result, Mp4Box};
+use mp4::{Mp4Box, Result};
 
 fn main() {
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("debug")).init();
     let args: Vec<String> = env::args().collect();
 
     if args.len() < 2 {
@@ -25,7 +26,7 @@ fn dump<P: AsRef<Path>>(filename: &P) -> Result<()> {
 
     // print out boxes
     for b in boxes.iter() {
-       println!("[{}] size={} {}", b.name, b.size, b.summary); 
+        println!("[{}] size={} {}", b.name, b.size, b.summary);
     }
 
     Ok(())
@@ -51,6 +52,9 @@ fn get_boxes(file: File) -> Result<Vec<Box>> {
     boxes.push(build_box(&mp4.ftyp));
     boxes.push(build_box(&mp4.moov));
     boxes.push(build_box(&mp4.moov.mvhd));
+    if let Some(gps) = &mp4.moov.gps {
+        boxes.push(build_box(gps));
+    }
 
     if let Some(ref mvex) = &mp4.moov.mvex {
         boxes.push(build_box(mvex));
@@ -134,7 +138,7 @@ fn get_boxes(file: File) -> Result<Vec<Box>> {
 }
 
 fn build_box<M: Mp4Box + std::fmt::Debug>(ref m: &M) -> Box {
-    return Box{
+    return Box {
         name: m.box_type().to_string(),
         size: m.box_size(),
         summary: m.summary().unwrap(),

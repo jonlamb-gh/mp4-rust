@@ -1,8 +1,8 @@
+use serde::Serialize;
 use std::io::{Read, Seek, SeekFrom, Write};
-use serde::{Serialize};
 
 use crate::mp4box::*;
-use crate::mp4box::{mvhd::MvhdBox, mvex::MvexBox, trak::TrakBox};
+use crate::mp4box::{gps::GpsBox, mvex::MvexBox, mvhd::MvhdBox, trak::TrakBox};
 
 #[derive(Debug, Clone, PartialEq, Default, Serialize)]
 pub struct MoovBox {
@@ -13,6 +13,9 @@ pub struct MoovBox {
 
     #[serde(rename = "trak")]
     pub traks: Vec<TrakBox>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gps: Option<GpsBox>,
 }
 
 impl MoovBox {
@@ -25,6 +28,7 @@ impl MoovBox {
         for trak in self.traks.iter() {
             size += trak.box_size();
         }
+        size += self.gps.as_ref().map(|gps| gps.box_size()).unwrap_or(0);
         size
     }
 }
@@ -43,7 +47,11 @@ impl Mp4Box for MoovBox {
     }
 
     fn summary(&self) -> Result<String> {
-        let s = format!("traks={}", self.traks.len());
+        let s = format!(
+            "traks={}, gps_found={}",
+            self.traks.len(),
+            self.gps.is_some()
+        );
         Ok(s)
     }
 }
@@ -55,6 +63,7 @@ impl<R: Read + Seek> ReadBox<&mut R> for MoovBox {
         let mut mvhd = None;
         let mut mvex = None;
         let mut traks = Vec::new();
+        let mut gps = None;
 
         let mut current = reader.seek(SeekFrom::Current(0))?;
         let end = start + size;
@@ -74,12 +83,16 @@ impl<R: Read + Seek> ReadBox<&mut R> for MoovBox {
                     let trak = TrakBox::read_box(reader, s)?;
                     traks.push(trak);
                 }
+                BoxType::GpsBox => {
+                    log::debug!("Found GPS box, size={}", s);
+                    gps = Some(GpsBox::read_box(reader, s)?);
+                }
                 BoxType::UdtaBox => {
                     // XXX warn!()
                     skip_box(reader, s)?;
                 }
                 _ => {
-                    // XXX warn!()
+                    log::warn!("Skipping box {} size {}", name, s);
                     skip_box(reader, s)?;
                 }
             }
@@ -97,6 +110,7 @@ impl<R: Read + Seek> ReadBox<&mut R> for MoovBox {
             mvhd: mvhd.unwrap(),
             mvex,
             traks,
+            gps,
         })
     }
 }
@@ -109,6 +123,9 @@ impl<W: Write> WriteBox<&mut W> for MoovBox {
         self.mvhd.write_box(writer)?;
         for trak in self.traks.iter() {
             trak.write_box(writer)?;
+        }
+        if let Some(gps) = &self.gps {
+            gps.write_box(writer)?;
         }
         Ok(0)
     }

@@ -1,14 +1,14 @@
 //! All ISO-MP4 boxes (atoms) and operations.
-//! 
+//!
 //! * [ISO/IEC 14496-12](https://en.wikipedia.org/wiki/MPEG-4_Part_14) - ISO Base Media File Format (QuickTime, MPEG-4, etc)
 //! * [ISO/IEC 14496-14](https://en.wikipedia.org/wiki/MPEG-4_Part_14) - MP4 file format
 //! * ISO/IEC 14496-17 - Streaming text format
 //! * [ISO 23009-1](https://www.iso.org/standard/79329.html) -Dynamic adaptive streaming over HTTP (DASH)
-//! 
+//!
 //! http://developer.apple.com/documentation/QuickTime/QTFF/index.html
 //! http://www.adobe.com/devnet/video/articles/mp4_movie_atom.html
-//! http://mp4ra.org/#/atoms 
-//! 
+//! http://mp4ra.org/#/atoms
+//!
 //! Supported Atoms:
 //! ftyp
 //! moov
@@ -49,7 +49,7 @@
 //!         trun
 //! mdat
 //! free
-//! 
+//!
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use std::convert::TryInto;
@@ -63,21 +63,21 @@ pub(crate) mod ctts;
 pub(crate) mod dinf;
 pub(crate) mod edts;
 pub(crate) mod elst;
+pub(crate) mod emsg;
 pub(crate) mod ftyp;
-pub(crate) mod hev1;
+pub(crate) mod gps;
 pub(crate) mod hdlr;
+pub(crate) mod hev1;
 pub(crate) mod mdhd;
 pub(crate) mod mdia;
-pub(crate) mod minf;
-pub(crate) mod moov;
-pub(crate) mod mvex;
 pub(crate) mod mehd;
-pub(crate) mod trex;
-pub(crate) mod emsg;
-pub(crate) mod moof;
-pub(crate) mod mp4a;
-pub(crate) mod mvhd;
 pub(crate) mod mfhd;
+pub(crate) mod minf;
+pub(crate) mod moof;
+pub(crate) mod moov;
+pub(crate) mod mp4a;
+pub(crate) mod mvex;
+pub(crate) mod mvhd;
 pub(crate) mod smhd;
 pub(crate) mod stbl;
 pub(crate) mod stco;
@@ -86,20 +86,21 @@ pub(crate) mod stsd;
 pub(crate) mod stss;
 pub(crate) mod stsz;
 pub(crate) mod stts;
-pub(crate) mod tkhd;
 pub(crate) mod tfhd;
-pub(crate) mod trak;
+pub(crate) mod tkhd;
 pub(crate) mod traf;
+pub(crate) mod trak;
+pub(crate) mod trex;
 pub(crate) mod trun;
 pub(crate) mod tx3g;
 pub(crate) mod vmhd;
 pub(crate) mod vp09;
 pub(crate) mod vpcc;
 
-pub use ftyp::FtypBox;
-pub use moov::MoovBox;
-pub use moof::MoofBox;
 pub use emsg::EmsgBox;
+pub use ftyp::FtypBox;
+pub use moof::MoofBox;
+pub use moov::MoovBox;
 
 pub const HEADER_SIZE: u64 = 8;
 // const HEADER_LARGE_SIZE: u64 = 16;
@@ -179,7 +180,8 @@ boxtype! {
     EsdsBox => 0x65736473,
     Tx3gBox => 0x74783367,
     VpccBox => 0x76706343,
-    Vp09Box => 0x76703039
+    Vp09Box => 0x76703039,
+    GpsBox => 0x67707320
 }
 
 pub trait Mp4Box: Sized {
@@ -297,47 +299,37 @@ mod value_u32 {
     use crate::types::FixedPointU16;
     use serde::{self, Serializer};
 
-    pub fn serialize<S>(
-        fixed: &FixedPointU16,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error>
+    pub fn serialize<S>(fixed: &FixedPointU16, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
-        {
-            serializer.serialize_u16(fixed.value())
-        }
+    {
+        serializer.serialize_u16(fixed.value())
+    }
 }
 
 mod value_i16 {
     use crate::types::FixedPointI8;
     use serde::{self, Serializer};
 
-    pub fn serialize<S>(
-        fixed: &FixedPointI8,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error>
+    pub fn serialize<S>(fixed: &FixedPointI8, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
-        {
-            serializer.serialize_i8(fixed.value())
-        }
+    {
+        serializer.serialize_i8(fixed.value())
+    }
 }
 
 mod value_u8 {
     use crate::types::FixedPointU8;
     use serde::{self, Serializer};
 
-    pub fn serialize<S>(
-        fixed: &FixedPointU8,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error>
+    pub fn serialize<S>(fixed: &FixedPointU8, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
-        {
-            serializer.serialize_u8(fixed.value())
-        }
+    {
+        serializer.serialize_u8(fixed.value())
+    }
 }
-
 
 #[cfg(test)]
 mod tests {

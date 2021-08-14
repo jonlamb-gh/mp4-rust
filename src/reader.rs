@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::io::{Read, Seek, SeekFrom};
 use std::time::Duration;
 
-use crate::*;
 use crate::mp4box::*;
+use crate::*;
 
 #[derive(Debug)]
 pub struct Mp4Reader<R> {
@@ -74,7 +74,8 @@ impl<R: Read + Seek> Mp4Reader<R> {
             if moov.traks.iter().any(|trak| trak.tkhd.track_id == 0) {
                 return Err(Error::InvalidData("illegal track id 0"));
             }
-            moov.traks.iter()
+            moov.traks
+                .iter()
                 .map(|trak| (trak.tkhd.track_id, Mp4Track::from(trak)))
                 .collect()
         } else {
@@ -160,5 +161,9 @@ impl<R: Read + Seek> Mp4Reader<R> {
         } else {
             Err(Error::TrakNotFound(track_id))
         }
+    }
+
+    pub fn into_inner(self) -> R {
+        self.reader
     }
 }

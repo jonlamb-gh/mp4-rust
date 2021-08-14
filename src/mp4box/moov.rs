@@ -84,7 +84,6 @@ impl<R: Read + Seek> ReadBox<&mut R> for MoovBox {
                     traks.push(trak);
                 }
                 BoxType::GpsBox => {
-                    log::debug!("Found GPS box, size={}", s);
                     gps = Some(GpsBox::read_box(reader, s)?);
                 }
                 BoxType::UdtaBox => {

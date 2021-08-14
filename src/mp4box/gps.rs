@@ -77,7 +77,11 @@ impl<R: Read + Seek> ReadBox<&mut R> for GpsBox {
         for _ in 0..count {
             let offset = reader.read_u32::<BigEndian>()?;
             let size = reader.read_u32::<BigEndian>()?;
-            data_blocks.push(GpsDataBlockInfo { offset, size });
+            if offset == 0 || size == 0 {
+                log::warn!("Ignoring block offset={}, size={}", offset, size);
+            } else {
+                data_blocks.push(GpsDataBlockInfo { offset, size });
+            }
         }
 
         skip_bytes_to(reader, start + size)?;
